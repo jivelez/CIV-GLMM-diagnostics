@@ -16,15 +16,15 @@ suppressPackageStartupMessages({
   if (length(missing) > 0) {
     install.packages(missing, repos = "https://cloud.r-project.org")
   }
-  library(lme4)
-  library(numDeriv)
-  library(mvtnorm)
-  library(MASS)
-  library(ggplot2)
-  library(dplyr)
-  library(tidyr)
-  library(purrr)
-  library(readr)
+  require(lme4)
+  require(numDeriv)
+  require(mvtnorm)
+  require(MASS)
+  require(ggplot2)
+  require(dplyr)
+  require(tidyr)
+  require(purrr)
+  require(readr)
 })
 
 # -----------------------------
