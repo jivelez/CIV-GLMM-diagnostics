@@ -483,9 +483,6 @@ make_plots <- function(summary_tbl, output_dir) {
 # -----------------------------
 # Main execution
 # -----------------------------
-if(!require(doParallel)) install.packages('doParallel')
-require(doParallel)
-
 ## simulations
 scenarios <- c("H0", "M0", "M1", "M2")
 raw_results <- run_simulations(sample_sizes = sample_sizes, scenarios = scenarios, R_reps = R_reps)
