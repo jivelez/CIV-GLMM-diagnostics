@@ -4,10 +4,7 @@
 
 This repository contains the R code and .qmd files used to generate the plots and numerical results, via simulation, presented in the article:
 
-Ángel, J. A.; Vélez, J.I. (2026). Finite-Sample Diagnostics for Random-Effects Misspecification in Poisson Generalized Linear Mixed Models. Axioms 2026.
-
----
-
+Ángel, J. A.; Vélez, J.I. (2026). Finite-Sample Diagnostics for Random-Effects Misspecification in Poisson Generalized Linear Mixed Models. _Axioms_, 2026.
 
 ### About the files
 
