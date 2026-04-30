@@ -21,18 +21,22 @@ geometry:
   - right=2cm
 ---
 
+## Packages
 
-```{r, echo=FALSE, message=FALSE}
-## packages
+```{r, message=FALSE}
+## check availability of MASS
 if(!require(MASS)) install.packages("MASS")
 require(MASS)
 
+## check availability of ggplot2
 if(!require(ggplot2)) install.packages("ggplot2")
 require(ggplot2)
 
+## check availability of lme4
 if(!require(lme4)) install.packages("lme4")
 require(lme4)
 
+## check availability of DHARMa
 if(!require(DHARMa)) install.packages("DHARMa")
 require(MASS)
 ```
@@ -59,9 +63,9 @@ p <- ggplot(epil, aes(x = period, y = y, group = subject)) +
     ) +
     labs(
         x = "Period",
-        y = "Seizure counts (y)",
-        title = "Longitudinal trajectories by subject",
-        subtitle = "Dashed line represents the overall mean trend"
+        y = "Seizure counts (y)"
+        #title = "Longitudinal trajectories by subject",
+        #subtitle = "Dashed line represents the overall mean trend"
     ) +
     theme_minimal()
 

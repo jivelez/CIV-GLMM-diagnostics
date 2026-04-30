@@ -1,0 +1,134 @@
+---
+title: "Figures 1 and 2"
+author: 
+  - name: Jairo A. Ángel, PhD
+    email: jaangelguzman@correo.unicordoba.edu.co
+    affiliations:
+      - name: Universidad del Córdoba, Montería
+  - name: Jorge I. Vélez, PhD
+    email: jvelezv@uninorte.edu.co
+    url: https://jorgeivanvelez.netlify.app/
+    orcid: 0000-0002-3146-7899
+    affiliations:
+      - name: Universidad del Norte, Barranquilla
+date: "4/30/2026"
+format: pdf
+self-contained: true
+geometry:
+  - top=2cm
+  - bottom=2cm
+  - left=2cm
+  - right=2cm
+---
+
+## Packages
+
+```{r message=FALSE, warning=FALSE}
+## check availability of ggplot2
+if(!require(ggplot2)) install.packages('ggplo2')
+require(ggplot2)
+```
+
+
+## Results from the simulation study
+
+```{r message=FALSE, warning=FALSE}
+## sample size
+n_vals <- c(50, 100, 200, 400, 600, 800, 1000, 2000, 3000)
+
+## results under M0
+M0_size  <- c(0.010, 0.030, 0.034, 0.040, 0.041, 0.041, 0.050, 0.05, 0.05)
+M0_power <- c(0.150, 0.250, 0.050, 0.600, 0.730, 0.780, 0.880, 0.90, 0.99)
+
+## results under M1
+M1_size  <- c(0.004, 0.035, 0.040, 0.045, 0.049, 0.05, 0.050, 0.05, 0.05)
+M1_power <- c(0.230, 0.650, 0.880, 0.990, 1.000, 1.00, 1.000, 1.000, 1.000)
+
+## results under M2
+M2_size  <- c(0.040, 0.046, 0.048, 0.049, 0.050, 0.050, 0.050, 0.050, 0.050)
+M2_power <- c(0.120, 0.240, 0.450, 0.680, 0.800, 0.880, 0.930, 0.990, 1.000)
+
+## put together
+df_M0_size  <- data.frame(n = n_vals, value = M0_size)
+df_M0_power <- data.frame(n = n_vals, value = M0_power)
+df_M1_size  <- data.frame(n = n_vals, value = M1_size)
+df_M1_power <- data.frame(n = n_vals, value = M1_power)
+df_M2_size  <- data.frame(n = n_vals, value = M2_size)
+df_M2_power <- data.frame(n = n_vals, value = M2_power)
+
+## data.frame with Type I error rates for all models
+df_size <- rbind(data.frame(df_M0_size, model = "M0"), 
+      data.frame(df_M1_size, model = "M1"), 
+      data.frame(df_M2_size, model = "M2"))
+
+## data.frame with power for all models
+df_power <- rbind(data.frame(df_M0_power, model = "M0"), 
+      data.frame(df_M1_power, model = "M1"), 
+      data.frame(df_M2_power, model = "M2"))
+```
+
+
+
+## Figure 1
+
+```{r, fig.align='center', fig.width=5, fig.height=4, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Figure 1. Empirical Type I error under varying levels of random-effects misspecification."}
+# Modificamos la función para que el logaritmo esté en la primera línea
+etiquetas_duales_invertidas <- function(x) {
+  paste0(round(log10(x), 2), " \n[", x, "]")
+}
+
+ggplot(df_size, aes(x = n, y = value, color = model)) +
+    geom_line(linewidth = 0.7) +
+    geom_point(size = 2) +
+    geom_hline(yintercept = 0.05, linetype = "dashed", color = "black") +
+    scale_x_log10(
+        # El título del eje refleja el nuevo orden: log10(n) arriba, n abajo
+        name = expression(paste(log[10](italic(n)), " [", italic(n), "]")), 
+        breaks = c(50, 100, 250, 500, 1000, 2000, 4000),
+        labels = etiquetas_duales_invertidas
+    ) +
+    # Leyenda con formato matemático para M0, M1, M2
+    scale_color_discrete(
+        name = "Model", 
+        labels = c(expression(italic(M)[0]), expression(italic(M)[1]), expression(italic(M)[2]))
+    ) +
+    coord_cartesian(ylim = c(0, 0.051)) +
+    labs(y = "Empirical Type I error") +
+    theme_minimal(base_size = 10) +
+    theme(
+        panel.grid.minor = element_blank(),
+        legend.position = "right",
+        # Ajuste de margen para acomodar las dos líneas de texto
+        axis.title.x = element_text(margin = margin(t = 10))
+    )
+```
+
+## Figure 2
+
+```{r, fig.align='center', fig.width=5, fig.height=4, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "Figure 2. Empirical power under varying levels of random-effects misspecification."}
+ggplot(df_power, aes(x = n, y = value, color = model)) +
+    geom_line(linewidth = 0.7) +
+    geom_point(size = 2) +
+    geom_hline(yintercept = 1, linetype = "dashed", color = "black") +
+    scale_x_log10(
+        # El título del eje refleja el nuevo orden: log10(n) arriba, n abajo
+        name = expression(paste(log[10](italic(n)), " [", italic(n), "]")), 
+        breaks = c(50, 100, 250, 500, 1000, 2000, 4000),
+        labels = etiquetas_duales_invertidas
+    ) +
+    # Leyenda con formato matemático para M0, M1, M2
+    scale_color_discrete(
+        name = "Model", 
+        labels = c(expression(italic(M)[0]), expression(italic(M)[1]), expression(italic(M)[2]))
+    ) +
+    coord_cartesian(ylim = c(0, 1.01)) +
+    labs(y = "Empirical Power") +
+    theme_minimal(base_size = 10) +
+    theme(
+        panel.grid.minor = element_blank(),
+        legend.position = "right",
+        # Ajuste de margen para acomodar las dos líneas de texto
+        axis.title.x = element_text(margin = margin(t = 10))
+    )
+```
+
