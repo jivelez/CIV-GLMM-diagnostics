@@ -1,0 +1,306 @@
+---
+title: "Figures 3, 4 and 5"
+author: 
+  - name: Jairo A. Ángel, PhD
+    email: jaangelguzman@correo.unicordoba.edu.co
+    affiliations:
+      - name: Universidad del Córdoba, Montería
+  - name: Jorge I. Vélez, PhD
+    email: jvelezv@uninorte.edu.co
+    url: https://jorgeivanvelez.netlify.app/
+    orcid: 0000-0002-3146-7899
+    affiliations:
+      - name: Universidad del Norte, Barranquilla
+date: "4/30/2026"
+format: html
+self-contained: true
+geometry:
+  - top=2cm
+  - bottom=2cm
+  - left=2cm
+  - right=2cm
+---
+
+
+```{r, echo=FALSE, message=FALSE}
+## packages
+if(!require(MASS)) install.packages("MASS")
+require(MASS)
+
+if(!require(ggplot2)) install.packages("ggplot2")
+require(ggplot2)
+
+if(!require(lme4)) install.packages("lme4")
+require(lme4)
+
+if(!require(DHARMa)) install.packages("DHARMa")
+require(MASS)
+```
+
+
+## Figure 3
+
+```{r, echo=FALSE, fig.align='center', fig.width=6, fig.height=5}
+## load data
+data(epil)
+
+## plotting
+p <- ggplot(epil, aes(x = period, y = y, group = subject)) +
+    # Individual trajectories in gray
+    geom_line(alpha = 0.35, color = "gray50") + 
+    # Global average line
+    stat_summary(
+        aes(group = 1), 
+        fun = mean, 
+        geom = "line", 
+        linewidth = 1.2, 
+        linetype = "dashed", 
+        color = "black"
+    ) +
+    labs(
+        x = "Period",
+        y = "Seizure counts (y)",
+        title = "Longitudinal trajectories by subject",
+        subtitle = "Dashed line represents the overall mean trend"
+    ) +
+    theme_minimal()
+
+p
+```
+
+## Figure 4
+
+### Lesaffre-Verbeke plot  
+
+```{r, echo=FALSE, fig.align='center', fig.width=5, fig.height=5}
+## fitting the Poisson mixed-effects model
+mod_glmm <- glmer(y ~ trt + period + base + age + (1|subject),
+                  family = poisson, data = epil)
+
+
+# function to estimate and plot Lesaffre-Verbeke residuals
+LV_unit_index_plot <- function(fit, data, id, time, nsim = 1000, seed = 123) {
+    set.seed(seed)
+    
+    sim <- simulateResiduals(fittedModel = fit, n = nsim)
+    u <- sim$scaledResiduals
+    z <- qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
+    
+    d <- data
+    d$z <- z
+    d <- d[order(d[[id]], d[[time]]), ]
+    
+    ids   <- sort(unique(d[[id]]))
+    times <- sort(unique(d[[time]]))
+    
+    Zmat <- matrix(NA, length(ids), length(times))
+    
+    for (i in seq_along(ids)) {
+        di <- d[d[[id]] == ids[i], ]
+        Zmat[i, match(di[[time]], times)] <- di$z
+    }
+    
+    # 🔥 key: remove rows with NAs
+    Zmat <- Zmat[complete.cases(Zmat), ]
+    
+    Sigma_hat <- cov(Zmat)
+    Sigma_inv <- solve(Sigma_hat)
+    
+    D2 <- apply(Zmat, 1, function(zi) t(zi) %*% Sigma_inv %*% zi)
+    I  <- sqrt(D2)
+    
+    cutoff <- quantile(I, 0.75) + 1.5 * IQR(I)
+    
+    idx <- which(I > cutoff)
+    plot(I,xlab = "Unit #",
+         pch = 16,
+         ylim = c(0, max(I) * 1.15),
+         xpd = NA,
+         las = 1,
+         col = 'white',
+         cex = 0.7,
+         ylab = "Modified Lesaffre–Verbeke ",
+         main = "")
+    points(I[-idx], pch = 16, col = 1, cex = 0.7)
+    
+    abline(h = cutoff, lty = 2, col = 2)
+    
+    if (length(idx) > 0) {
+        points(idx, I[idx], col = 2, pch = 16, cex = 0.7)
+        text(idx, I[idx], labels = idx, pos = 3, col = 2)
+    }
+}
+
+# Modified Lesaffre-Verbeke plot for epil data
+LV_unit_index_plot(
+    fit  = mod_glmm,
+    data = epil,
+    id   = "subject",
+    time = "period"
+)
+```
+
+### Mahalanobis
+
+```{r echo=FALSE, message=FALSE}
+## function to compute Mahalanobis distance
+fig6_mahalanobis_QQ <- function(fit, group = "subject",
+                                out_pdf = NULL,
+                                label_extremes = TRUE,
+                                n_labels = 3,
+                                width = 5,
+                                height = 4, 
+                                x_right = 7) {
+    
+    # get random effects
+    b_hat <- ranef(fit)[[group]][, 1]
+    b_names <- rownames(ranef(fit)[[group]])
+    
+    # variance of RE 
+    sig2 <- as.numeric(VarCorr(fit)[[group]][1, 1])
+    sig  <- sqrt(sig2)
+    
+    # Mahalanobis distance (q = 1)
+    D2 <- (b_hat / sig)^2
+    names(D2) <- b_names
+    
+    # quantiles 
+    n <- length(D2)
+    theo <- qchisq(ppoints(n), df = 1)
+    emp  <- sort(D2)
+    
+    # indexes
+    ord <- order(D2, decreasing = TRUE)
+    idx_extremos <- ord[1:min(n_labels, length(ord))]
+    lab_ids <- names(D2)[idx_extremos]
+    emp_pos <- match(D2[lab_ids], emp)
+    
+    ## draw plot
+    draw_plot <- function() {
+
+        y_top   <- max(emp) * 1.15 # change range
+        x_right <- x_right
+        
+        # plot all points
+        plot(theo, emp,
+             pch = 16,
+             cex = 0.65,
+             xlab = "Chi--squared quantiles",
+             ylab = "Mahalanobis distance quantiles",
+             main = "",
+             las = 1,
+             xlim = c(0, x_right),
+             ylim = c(0, y_top),
+             xpd  = NA,
+             col  = "black") 
+        
+        # reference line
+        abline(0, 1, col = 2, lty = 2, lwd = 1.4)
+        
+        # highlight points in red
+        if (label_extremes) {
+            points(theo[emp_pos], emp[emp_pos], 
+                   pch = 16, col = 2, cex = 0.8)
+            text(theo[emp_pos],
+                 emp[emp_pos],
+                 labels = lab_ids,
+                 cex = 0.8,
+                 pos = 3, 
+                 offset = 0.5,
+                 xpd = NA, 
+                 col = 2)
+        }
+    }
+    
+    # show
+    draw_plot()
+    
+    # save
+    invisible(list(D2 = D2, sigma = sig, theo = theo, emp = emp))
+}
+```
+
+```{r, fig.align='center', fig.width=5, fig.height=5, echo=FALSE}
+## apply function
+fig6_mahalanobis_QQ(mod_glmm, n_labels = 4)
+```
+
+
+
+## Figure 5
+
+### Q-Q plot
+
+```{r, echo=FALSE, fig.align='center', fig.width=5, fig.height=5}
+## compute residuals
+residuals <- function(fit, nsim = 1000){
+  sim <- DHARMa::simulateResiduals(fittedModel = fit, n = nsim)
+  u <- sim$scaledResiduals
+  z <- qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
+  z
+}
+
+## QQ-plot
+z <- residuals(mod_glmm)
+n <- length(z)
+theo <- qnorm(ppoints(n))
+z_sorted <- sort(z)
+# Obtenemos los índices originales para etiquetarlos correctamente
+# order(z) nos dice qué posición ocupaba cada valor en el vector original
+idx_sorted <- order(z) 
+
+# plotting using base
+plot(theo, z_sorted, las = 1,
+     xlab = "N(0,1) quantiles",
+     ylab = "Std least confounded residuals",
+     xlim = c(-3.5, 3.5), ylim = c(-3.5, 3.5))
+abline(0, 1, lty = 2, lwd = 1.2, col = 2)
+
+# flag points where z_sorted > 3
+outliers_mask <- z_sorted > 3
+
+# change color and point size
+points(theo[outliers_mask], z_sorted[outliers_mask], 
+       col = 2, pch = 19)
+
+# add
+text(theo[outliers_mask], z_sorted[outliers_mask], 
+     labels = idx_sorted[outliers_mask], 
+     pos = 2, cex = 0.8, col = 2)
+```
+
+### Histogram + density
+
+```{r, echo=FALSE, fig.align='center', fig.width=5, fig.height=5}
+## density
+dens <- density(z, na.rm = TRUE)
+y_top <- max(dens$y) * 1.12
+  
+hist(z, 
+     probability = TRUE,
+     col = "gray40",
+     las = 1,
+     border = "gray40",
+     xlab = "Std least confounded residuals",
+     ylab = "Density",
+     main = "",
+     breaks = 12,
+     ylim = c(0, y_top), 
+     xlim = c(-4, 4),
+     bty = "l")
+box()
+  
+  #lines(dens, lwd = 1.5, col = "black")
+  
+  xg <- seq(-4, max(z), length.out = 300)
+  lines(xg, dnorm(xg, mean = 0, sd = 1),
+        lty = 1, lwd = 1.5, col = 4)
+```
+
+## Goodness-of-fit
+
+```{r echo=FALSE}
+## Shapiro-Wilk godness-of-fit
+shapiro.test(z)
+```
+
